@@ -7,8 +7,7 @@ subroutine siesta2bt(cell, xa, na)
 
  use spglib_f08
 
- use Kpoint_grid,  only : kscell, nkpnt, kpoint
-
+ use m_find_kgrid,   only : find_kgrid
 
  use fdf
  use precision,    only : dp, sp
@@ -65,18 +64,23 @@ subroutine siesta2bt(cell, xa, na)
 
  ! irreducible k-points, number of k-points, num. of *_ikp
 
- real(dp),      allocatable :: cart_ikp(:,:), frac_ikp(:,:)
+ real(dp),      allocatable :: kpoint(:,:) !, frac_ikp(:,:)
+! real(dp),      pointer     :: kpoint(:,:)
  integer                    :: nk
  integer                    :: ink
  integer                    :: maxnk
+ real(dp),      allocatable :: kweight(:)
+ real(dp)                   :: eff_kgrid_cutoff 
+
 
  ! spglib variables
  
- integer,      allocatable :: grid_address(:,:)
- integer,      allocatable :: map(:)
- integer                   :: mesh(3)
- integer                   :: is_shift(3)
- integer                   :: is_time_reversal
+ !integer,      allocatable :: grid_address(:,:)
+! integer,      allocatable :: map(:)
+! integer                   :: mesh(3)
+! integer                   :: is_shift(3)
+! logical                   :: is_time_reversal
+ logical                   :: is_time_reversal_symmetry
  real(dp)                  :: symprec
  type(SpglibDataset)       :: ds
 
@@ -187,51 +191,37 @@ subroutine siesta2bt(cell, xa, na)
 ! write(*,*) 'siesta2bt: Dataset ok'
 
  ! get irredutible k-points (ik-points)
- mesh(1) = bt_rcell(1,1) 
- mesh(2) = bt_rcell(2,2) 
- mesh(3) = bt_rcell(3,3) 
+! mesh(1) = bt_rcell(1,1) 
+! mesh(2) = bt_rcell(2,2) 
+! mesh(3) = bt_rcell(3,3) 
 
  nk = maxnk
- allocate(grid_address(3,nk),map(nk))
+! allocate(grid_address(3,nk),map(nk))
 
- is_shift = bt_srcell*2
- is_time_reversal = 0
+! is_shift = bt_srcell
+ is_time_reversal_symmetry = .false.
 
- write(*,*) 'siesta2bt: input of spg_get_ir_reciprocal_mesh'
- write(*,'(A18,3I3)') 'mesh: ', mesh 
- write(*,'(A18,3I3)') 'is_shift: ', is_shift 
- write(*,'(A18,3I3)') 'is_time_reversal: ', is_time_reversal
- write(*,'(A18/,(3F16.9))') 'lattice: ', cell 
- write(*,'(A18/,(3F16.9))') 'position: ', fxa 
- write(*,'(A18,(100I2))') 'type: ', isa(1:na)
- write(*,'(A18,I2)') 'na: ', na
- write(*,'(A18,E16.9)') 'symprec: ', symprec
- write(*,*)
+! ink = spg_get_ir_reciprocal_mesh(grid_address, &
+!                                  map,          &
+!                                  mesh,         &
+!                                  is_shift,     &
+!                                  is_time_reversal,  &
+!                                  cell,         &
+!                                  fxa,          &
+!                                  isa(1:na),    &
+!                                  na,           &
+!                                  symprec)
 
- ink = spg_get_ir_reciprocal_mesh(grid_address, &
-                                  map,          &
-                                  mesh,         &
-                                  is_shift,     &
-                                  is_time_reversal,  &
-                                  cell,         &
-                                  fxa,          &
-                                  isa(1:na),    &
-                                  na,           &
-                                  symprec)
- write(*,*) 'siesta2bt: output of spg_get_ir_reciprocal_mesh'
- write(*,'(A18,3I3)') 'mesh: ', mesh 
- write(*,'(A18,3I3)') 'is_shift: ', is_shift 
- write(*,'(A18,3I3)') 'is_time_reversal: ', is_time_reversal
- write(*,'(A18/,(3F16.9))') 'lattice: ', cell 
- write(*,'(A18/,(3F16.9))') 'position: ', fxa 
- write(*,'(A18,(100I2))') 'type: ', isa(1:na)
- write(*,'(A18,I2)') 'na: ', na
- write(*,'(A18,E16.9)') 'symprec: ', symprec
- write(*,'(A18,I4)') 'ink: ', ink
- write(*,*)
+! allocate(kpoint(3,nk), frac_ikp(3,nk), kweight(nk))
+ allocate(kpoint(3,nk), kweight(nk))
+! allocate(kpoint(3,10), frac_ikp(3,10), kweight(10))
 
- maxnk = ink
- allocate(cart_ikp(3,ink), frac_ikp(3,ink))
+ call find_kgrid(cell, bt_rcell, bt_srcell, .true., &
+                 is_time_reversal_symmetry,            &
+                 nk, kpoint, kweight, eff_kgrid_cutoff)
+
+! maxnk = ink
+! allocate(kpoint(3,ink), frac_ikp(3,ink))
 
  ! get reciprical cell vectors
  call get_kpoints_scale('BandLinesScale',rcell,ierr)
@@ -239,15 +229,15 @@ subroutine siesta2bt(cell, xa, na)
  if (ierr /= 0) return
 
  ! calculate ik-prints from spglib's output as in the spglib's manual
- do i=1, ink
-   cart_ikp(:,i) = matmul(rcell,(grid_address(:,i) + is_shift/2.)/mesh)
-   frac_ikp(:,i) = (grid_address(:,i) + is_shift/2.)/mesh
- enddo
+! do i=1, ink
+!   kpoint(:,i) = matmul(rcell,(grid_address(:,i) + is_shift/2.)/mesh)
+!   frac_ikp(:,i) = (grid_address(:,i) + is_shift/2.)/mesh
+! enddo
  
  ! calculate eigenenergies
- call bands( no_s, h_spin_dim, spinor_dim, no_u, no_l, maxnh, maxnk, &
-             numh, listhptr, listh, H, S, ef, xijo, indxuo, &
-             .false., ink, cart_ikp, ebk, occtol, .false. )
+! call bands( no_s, h_spin_dim, spinor_dim, no_u, no_l, maxnh, maxnk, &
+!             numh, listhptr, listh, H, S, ef, xijo, indxuo, &
+!             .false., ink, kpoint, ebk, occtol, .false. )
 
  ! calculate modules and angules between the cell-vectors
  ! Modules
@@ -331,7 +321,7 @@ subroutine siesta2bt(cell, xa, na)
  write(103,*) trim(slabel)
 
  ! number of irredutible kpoints
- write(103,'(I8)') ink
+ write(103,'(I8)') nk
  
  ! write ik-points
  !TODO: implementar leitura do no_u pela flag BT.NumberOfEigenStates
@@ -386,12 +376,12 @@ subroutine siesta2bt(cell, xa, na)
  enddo
  write(104,*) 'space group num:',ds%spacegroup_number
  write(104,*) 'mesh:'
- write(104,*) mesh
+ write(104,*) bt_rcell(1,1),bt_rcell(2,2),bt_rcell(3,3)
  write(104,*) ''
  write(104,*) 'rcell'
- write(104,'(3(3F14.9,/))') kscell
+ write(104,'(3(3F14.9,/))') rcell
  write(104,*) ''
- write(104,*) 'nkpoints', nkpnt 
+ write(104,*) 'nkpoints', nk 
  write(104,*) ''
  write(104,*) 'kpoints:'
  write(104,'(3F14.9)') kpoint
