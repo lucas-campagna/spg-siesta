@@ -280,7 +280,7 @@ call cart2frac(na, xa(1,:), xa(2,:), xa(3,:), cell, fxa)
    ! write energies
    do ii=1,spinor_dim
      do iii=1, no_u
-       write(103,'(F14.10)') ebk(iii,ii,i)
+       write(103,'(F14.10)') ebk(iii,ii,i)*13.605698066
      enddo
      deltae=ebk(1,ii,i) - Ef
      cont=1
@@ -322,12 +322,11 @@ call cart2frac(na, xa(1,:), xa(2,:), xa(3,:), cell, fxa)
  write(104,*) 'space group num:',ds%spacegroup_number
  write(104,*) 'mesh:'
  write(104,*) bt_rcell(1,1),bt_rcell(2,2),bt_rcell(3,3)
- write(104,*) ''
- write(104,*) ''
- write(104,*) 'nkpoints', ink 
- write(104,*) ''
- write(104,*) 'kpoints:'
- write(104,'(4F14.9)') (frac_kpoint(:,i), kweight(i), i=1,ink)
+! write(104,*) ''
+! write(104,*) 'nkpoints', ink 
+! write(104,*) ''
+! write(104,*) 'kpoints:'
+! write(104,'(4F14.9)') (frac_kpoint(:,i), kweight(i), i=1,ink)
  close(104)
 
  

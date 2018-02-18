@@ -209,7 +209,7 @@ subroutine siesta2bt(cell, xa, na)
 
  call bands( no_s, h_spin_dim, spinor_dim, no_u, no_l, maxnh, maxnk, &
              numh, listhptr, listh, H, S, ef, xijo, indxuo, &
-             .true., ink, ikp, ebk, occtol, .false. )
+             .false., ink, ikp, ebk, occtol, .false. )
 
  ! Write BoltzTrap input files:
  ! ===============================================
@@ -277,7 +277,7 @@ subroutine siesta2bt(cell, xa, na)
    ! write energies
    do ii = 1,spinor_dim
      do iii = 1, nb2write
-       write(103,'(F14.10)') ebk(iii,ii,i)
+       write(103,'(F14.10)') ebk(iii,ii,i)*13.605698066
      enddo
    enddo
  enddo
@@ -305,6 +305,11 @@ subroutine siesta2bt(cell, xa, na)
  write(104,*) cell2(1,:)
  write(104,*) cell2(2,:)
  write(104,*) cell2(3,:)
+ write(104,*) ''
+ write(104,*) 'nkpoints', ink 
+ write(104,*) ''
+ write(104,*) 'kpoints:'
+ write(104,'(4F14.9)') (ikp(:,i), i=1,ink)
  close(104)
 
  
