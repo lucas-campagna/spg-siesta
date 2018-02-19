@@ -53,6 +53,7 @@ subroutine siesta2bt(cell, xa, na)
 
  integer                    :: na
  real(dp)                   :: cell(3,3)
+ real(dp)                   :: rcell(3,3)
  real(dp)                   :: xa(3,na)
 
  real(dp)                   :: tcell(3,3) ! transposed cell
@@ -60,8 +61,8 @@ subroutine siesta2bt(cell, xa, na)
 
  ! irreducible k-points, number of k-points, num. of *_ikp
 
- real(dp),      allocatable :: kpoint(:,:)
- real(dp),      allocatable :: frac_kpoint(:,:)
+ real(dp),      allocatable :: kpoint_cart(:,:)
+ real(dp),      allocatable :: kpoint_frac(:,:)
  integer                    :: nk, maxnk
  integer                    :: ink
  real(dp),      allocatable :: kweight(:)
@@ -142,47 +143,41 @@ subroutine siesta2bt(cell, xa, na)
  ! read symprec from fdf file
  symprec = fdf_single('SPG.Symprec',1.e-2)
  
-call cart2frac(na, xa(1,:), xa(2,:), xa(3,:), cell, fxa)
+ call cart2frac(na, xa(1,:), xa(2,:), xa(3,:), cell, fxa)
 
 
-!enddo
-! TODO: calculate rotation matrices, translation vectors
+ !enddo
+ ! TODO: calculate rotation matrices, translation vectors
  ! and lattice type.
  ! ds usage:
  ! https://atztogo.github.io/spglib/api.html?highlight=kpoint#spg-get-dataset-and-spg-get-dataset-with-hall-number
-! write(*,*) 'siesta2bt: About to run spg_get_dataset'
- write(*,*) 'siesta2bt: chamando spg_get_dataset'
+ ! write(*,*) 'siesta2bt: About to run spg_get_dataset'
  ds = spg_get_dataset(tcell, fxa, isa(1:na), na, symprec)
-! write(*,*) 'siesta2bt: Dataset ok'
 
  is_time_reversal_symmetry = .false.
  
  nk = product(mesh)
  ink = nk
- write(*,*) 'siesta2bt: allocando vetor frac_kpoint(3,',ink,')'
- allocate(frac_kpoint(3,ink), kweight(ink))
- write(*,*) 'siesta2bt: chamando find_irreducible_kpoint'
- call find_irreducible_kpoints(mesh, bt_shift, is_time_reversal_symmetry,ds%rotations, ds%n_operations, frac_kpoint, kweight, ink)
- write(*,*) 'siesta2bt: ink', ink
-! nk = ink
-! allocate(kpoint(3,ink), frac_kpoint(3,ink))
- allocate( ebk(no_u, spinor_dim, ink) )
+ allocate(kpoint_frac(3,nk), kweight(nk))
+ call find_irreducible_kpoints(mesh, bt_shift, is_time_reversal_symmetry,ds%rotations, ds%n_operations, kpoint_frac, kweight, ink)
+ ! nk = ink
 
- ! get reciprical cell vectors
-! call get_kpoints_scale('BandLinesScale',rcell,ierr)
-!
-! if (ierr /= 0) return
+ allocate( ebk(no_u, spinor_dim, ink), kpoint_cart(3,ink) )
 
- ! calculate ik-prints from spglib's output as in the spglib's manual
-! do i=1, ink
-!   kpoint(:,i) = matmul(rcell,(grid_address(:,i) + is_shift/2.)/mesh)
-!   frac_kpoint(:,i) = (grid_address(:,i) + is_shift/2.)/mesh
-! enddo
- 
+ if(nk /= ink) then
+   kpoint_cart = kpoint_frac
+   deallocate(kpoint_frac)
+   allocate(kpoint_frac(3,ink))
+   kpoint_frac = kpoint_cart
+ end if
+
+ call reclat( cell, rcell, 1 )
+ kpoint_cart = matmul(rcell,kpoint_frac)
+
  ! calculate eigenenergies
-! call bands( no_s, h_spin_dim, spinor_dim, no_u, no_l, maxnh, nk, &
-!             numh, listhptr, listh, H, S, ef, xijo, indxuo, &
-!             .false., ink, kpoint, ebk, occtol, .false. )
+ call bands( no_s, h_spin_dim, spinor_dim, no_u, no_l, maxnh, nk, &
+             numh, listhptr, listh, H, S, ef, xijo, indxuo, &
+             .false., ink, kpoint_cart, ebk, occtol, .false. )
 
  ! calculate modules and angules between the cell-vectors
  ! Modules
@@ -250,10 +245,6 @@ call cart2frac(na, xa(1,:), xa(2,:), xa(3,:), cell, fxa)
 
  do i=1, ds%n_operations
    write(102,'(9I3)') ds%rotations(:,:,i)
-!   write(102,'(3I4)') ds%rotations(:,1,i)
-!   write(102,'(3I4)') ds%rotations(:,2,i)
-!   write(102,'(3I4)') ds%rotations(:,3,i)
-!   write(102,'(I4)') i
  enddo
 
  close(102)
@@ -275,7 +266,7 @@ call cart2frac(na, xa(1,:), xa(2,:), xa(3,:), cell, fxa)
  minbc = 200
  maxbv = -200
  do i=1, ink
-   write(103,'(3F14.9,I5)') frac_kpoint(:,i), spinor_dim*no_u
+   write(103,'(3F14.9,I5)') kpoint_frac(:,i), spinor_dim*no_u
    
    ! write energies
    do ii=1,spinor_dim
@@ -289,7 +280,7 @@ call cart2frac(na, xa(1,:), xa(2,:), xa(3,:), cell, fxa)
        cont = cont + 1
      enddo
 
-     write(104,'(3F14.9)') frac_kpoint(:,i)
+     write(104,'(3F14.9)') kpoint_frac(:,i)
      write(104,'(A,F14.9,A,F14.9,A,F14.9,A,I5)')'maxbv: ', ebk(cont-1,ii,i),'   minbc: ', ebk(cont,ii,i), &
      '   egap: ', ebk(cont,ii,i) - ebk(cont-1,ii,i), '    cont:  ', cont
      write(104,*) 
@@ -322,11 +313,10 @@ call cart2frac(na, xa(1,:), xa(2,:), xa(3,:), cell, fxa)
  write(104,*) 'space group num:',ds%spacegroup_number
  write(104,*) 'mesh:'
  write(104,*) bt_rcell(1,1),bt_rcell(2,2),bt_rcell(3,3)
-! write(104,*) ''
-! write(104,*) 'nkpoints', ink 
-! write(104,*) ''
-! write(104,*) 'kpoints:'
-! write(104,'(4F14.9)') (frac_kpoint(:,i), kweight(i), i=1,ink)
+ write(104,*) 'ikpoints:'
+ do i=1,ink
+ write(104,*) kpoint_frac(:,i)
+ enddo
  close(104)
 
  

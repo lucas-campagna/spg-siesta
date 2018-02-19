@@ -25,6 +25,7 @@ subroutine siesta2bt(cell, xa, na)
  use band,            only : bands
 
  use files, only : slabel
+ use cellsubs,      only : reclat
 
  implicit none
 
@@ -51,7 +52,8 @@ subroutine siesta2bt(cell, xa, na)
 ! *******************************************************************
 
  integer                    :: na, na4
- real(dp)                   :: cell(3,3), cell2(3,3)
+ real(dp)                   :: cell(3,3)
+ real(dp)                   :: rcell(3,3)
  real(dp)                   :: xa(3,na)
  real(dp)                   :: tcell(3,3)
  real(dp)                   :: fxa(3,na)
@@ -62,9 +64,9 @@ subroutine siesta2bt(cell, xa, na)
  ! irreducible k-points (ikp), number of k-points, num. of ikp
 
  real(dp),      allocatable :: ikp(:,:)
+ real(dp),      allocatable :: ikp_cart(:,:)
  integer                    :: nk
  integer                    :: ink
- integer                    :: maxnk
 
  ! spglib variables
  
@@ -118,21 +120,23 @@ subroutine siesta2bt(cell, xa, na)
      bt_rcell(2,i) = fdf_bintegers(pline,2)
      bt_rcell(3,i) = fdf_bintegers(pline,3)
    if ( fdf_bnvalues(pline) > 3 ) then
-     bt_wrcell(i) = fdf_bvalues(pline,4)
+     is_shift(i) = fdf_bvalues(pline,4)
    else
-     bt_wrcell(i) = 0._dp
+     is_shift(i) = 0._dp
    end if
  enddo
- maxnk = abs( bt_rcell(1,1) * bt_rcell(2,2) * bt_rcell(3,3) + &
+ nk = abs( bt_rcell(1,1) * bt_rcell(2,2) * bt_rcell(3,3) + &
               bt_rcell(2,1) * bt_rcell(3,2) * bt_rcell(1,3) + &
               bt_rcell(3,1) * bt_rcell(1,2) * bt_rcell(2,3) - &
               bt_rcell(1,1) * bt_rcell(3,2) * bt_rcell(2,3) - &
               bt_rcell(2,1) * bt_rcell(1,2) * bt_rcell(3,3) - &
               bt_rcell(3,1) * bt_rcell(2,2) * bt_rcell(1,3) )   
 
- allocate( ebk(no_u, spinor_dim, maxnk) )
+ mesh(1) = bt_rcell(1,1) 
+ mesh(2) = bt_rcell(2,2) 
+ mesh(3) = bt_rcell(3,3) 
 
- is_shift = bt_wrcell
+ allocate( ebk(no_u, spinor_dim, nk) )
 
  ! read symprec from fdf file
  symprec = fdf_single('SPG.Symprec',1.e-2)
@@ -141,9 +145,8 @@ subroutine siesta2bt(cell, xa, na)
 
  ! TODO: symmetrize structure
  ! spg_find_primitive(cell, fxa, isa, na, symprec) => ?
- cell2 = tcell
 
- allocate(fxa4(3,na*4), isa4(na*4), grid_address(3,maxnk), map(maxnk))
+ allocate(fxa4(3,na*4), isa4(na*4), grid_address(3,nk), map(nk))
 
  fxa4 = 0.0
  isa4 = 0
@@ -163,11 +166,6 @@ subroutine siesta2bt(cell, xa, na)
  print*, 'siesta2bt:  Number of symops:', ds%n_operations
  ! get irreducible k-points (ik-points)
  ! What do in the case of non-cartesian basis?
- mesh(1) = bt_rcell(1,1) 
- mesh(2) = bt_rcell(2,2) 
- mesh(3) = bt_rcell(3,3) 
-
- nk = maxnk
 
  ink = spg_get_ir_reciprocal_mesh(grid_address, &
                                   map,          &
@@ -180,7 +178,7 @@ subroutine siesta2bt(cell, xa, na)
                                   na,           &
                                   symprec)
 
- allocate(ikp(3,ink))
+ allocate(ikp(3,ink),ikp_cart(3,ink))
  ikp=0.d0
 !
 ! To account for the difference of indices in C and Fortran, add 1 to values of all
@@ -193,23 +191,22 @@ subroutine siesta2bt(cell, xa, na)
 ! grid_address; if iteration variable i and map(i) are equal, then this is one
 ! point in the IBZ.
 !
- 
  counter_kp_ibz = 0
- do i = 1, maxnk
+ do i = 1, nk
     if (i == map(i)) then
-       counter_kp_ibz = counter_kp_ibz + 1
-       ikp(:,counter_kp_ibz) = dble(is_shift + 2*grid_address(:,map(i)))/dble(2*mesh)
-!       print*, ikp(:,counter_kp_ibz)
-    endif
+      counter_kp_ibz = counter_kp_ibz + 1
+      ikp(:,counter_kp_ibz) = dble(is_shift + 2*grid_address(:,map(i)))/dble(2*mesh)
+    end if
  end do
 
- print*, ' siesta2bt: Number of k-points in IBZ, from spglib and extracted from grid_address: ',ink, counter_kp_ibz
+ ! calculates eigenenergies
+ call reclat( cell, rcell, 1 )
 
- ! calculate eigenenergies
+ ikp_cart = matmul(rcell,ikp)
 
- call bands( no_s, h_spin_dim, spinor_dim, no_u, no_l, maxnh, maxnk, &
+ call bands( no_s, h_spin_dim, spinor_dim, no_u, no_l, maxnh, ink, &
              numh, listhptr, listh, H, S, ef, xijo, indxuo, &
-             .false., ink, ikp, ebk, occtol, .false. )
+             .false., ink, ikp_cart, ebk, occtol, .false. )
 
  ! Write BoltzTrap input files:
  ! ===============================================
@@ -301,10 +298,6 @@ subroutine siesta2bt(cell, xa, na)
    write(104,*) fxa(:,i)
  enddo
  write(104,*) 'space group num:',ds%spacegroup_number
- write(104,*) 'cell2:'
- write(104,*) cell2(1,:)
- write(104,*) cell2(2,:)
- write(104,*) cell2(3,:)
  write(104,*) ''
  write(104,*) 'nkpoints', ink 
  write(104,*) ''
