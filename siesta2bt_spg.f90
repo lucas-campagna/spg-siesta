@@ -16,7 +16,7 @@ subroutine siesta2bt(cell, xa, na)
  use atomlist,     only : qtot
 
  ! Needed for band call
- use atomlist,        only : no_s, no_u, no_l, indxuo
+ use atomlist,        only : no_s, no_u ,no_l, indxuo
  use m_spin,          only : h_spin_dim, spinor_dim
  use sparse_matrices, only : maxnh, listh, listhptr, numh
  use sparse_matrices, only : H, S, xijo
@@ -51,32 +51,27 @@ subroutine siesta2bt(cell, xa, na)
 ! through subroutine reclat.
 ! *******************************************************************
 
- integer                    :: na, na4
+ integer                    :: na
  real(dp)                   :: cell(3,3)
- real(dp)                   :: rcell(3,3)
  real(dp)                   :: xa(3,na)
  real(dp)                   :: tcell(3,3)
  real(dp)                   :: fxa(3,na)
- real(dp), allocatable      :: fxa4(:,:)
- integer,  allocatable      :: isa4(:)
-! integer                    :: na_conv
 
- ! irreducible k-points (ikp), number of k-points, num. of ikp
+ ! reciprocal cell, irreducible k-points, number of (i)k-points, index of bands to be saved
 
- real(dp),      allocatable :: ikp(:,:)
- real(dp),      allocatable :: ikp_cart(:,:)
- integer                    :: nk
- integer                    :: ink
+ real(dp)                   :: rcell(3,3)
+ real(dp),      allocatable :: kpoint_frac(:,:)
+ real(dp),      allocatable :: kpoint_cart(:,:)
+ integer                    :: nk, ink
+ integer                    :: first_band, last_band
 
  ! spglib variables
  
- integer,      allocatable :: grid_address(:,:)
- integer,      allocatable :: map(:)
- integer                   :: mesh(3)
- integer                   :: is_shift(3)
- integer                   :: is_time_reversal
+ integer                   :: time_reversal
  real(dp)                  :: symprec
  type(SpglibDataset)       :: ds
+ integer,      allocatable :: grid_address(:,:)
+ integer,      allocatable :: map(:)
 
  ! fdf variables
 
@@ -85,18 +80,13 @@ subroutine siesta2bt(cell, xa, na)
 
  ! internal variables
 
- integer                    :: i, ii, iii, counter_kp_ibz, nb2write
+ integer                    :: i, ii, iii, counter_kp_ibz
  logical                    :: bt_calc
 
- ! reciprocral cell and weights
+ !mesh and shift of reciprocal space
 
- integer                    :: bt_rcell(3,3)
- real(dp)                   :: bt_wrcell(3)
-
- ! module and angule of lattice vectors
-
- real(dp)                   :: cellm(3), celang(3)
- real(dp),        parameter ::  pi = 3.1415926d0
+ integer                    :: mesh(3)
+ integer                    :: shift(3)
 
  ! Band energies
  real(dp),    allocatable :: ebk(:,:,:)
@@ -111,52 +101,46 @@ subroutine siesta2bt(cell, xa, na)
   return
  endif
  
+ ! ===================================================================
+ ! (1) Get input parameters:
+ ! 1) mesh and shift of recipricral space
+ ! 2) symprec
+ ! 3) First band index to save
+ ! 4) Last band index to save
+ ! 5) Time reversal
+ ! ===================================================================
+
  ! read block BT.kgrid_Monkhorst_Pack
  do i=1, 3
    if (.not. fdf_bline(bfdf,pline)) then
      call die('siesta2bt: ERROR in BT.kgrid_Monkhorst_Pack block')
    end if
-     bt_rcell(1,i) = fdf_bintegers(pline,1)
-     bt_rcell(2,i) = fdf_bintegers(pline,2)
-     bt_rcell(3,i) = fdf_bintegers(pline,3)
+     mesh(i) = fdf_bintegers(pline,i) 
    if ( fdf_bnvalues(pline) > 3 ) then
-     is_shift(i) = fdf_bvalues(pline,4)
+     shift(i) = nint(fdf_bvalues(pline,4))
    else
-     is_shift(i) = 0._dp
+     shift(i) = 0
    end if
  enddo
- nk = abs( bt_rcell(1,1) * bt_rcell(2,2) * bt_rcell(3,3) + &
-              bt_rcell(2,1) * bt_rcell(3,2) * bt_rcell(1,3) + &
-              bt_rcell(3,1) * bt_rcell(1,2) * bt_rcell(2,3) - &
-              bt_rcell(1,1) * bt_rcell(3,2) * bt_rcell(2,3) - &
-              bt_rcell(2,1) * bt_rcell(1,2) * bt_rcell(3,3) - &
-              bt_rcell(3,1) * bt_rcell(2,2) * bt_rcell(1,3) )   
 
- mesh(1) = bt_rcell(1,1) 
- mesh(2) = bt_rcell(2,2) 
- mesh(3) = bt_rcell(3,3) 
+ symprec = fdf_single('BT.Symprec',1.e-2)
 
- allocate( ebk(no_u, spinor_dim, nk) )
+ first_band = fdf_integer('BT.First_Band',1)
+ last_band  = fdf_integer('BT.Last_Band',first_band+15) 
 
- ! read symprec from fdf file
- symprec = fdf_single('SPG.Symprec',1.e-2)
- 
+ if (first_band > last_band) call die('BT.Last_Band argument must be bigger than BT.First_Band')
+ if (last_band > no_u) last_band = no_u
+
+ time_reversal  = fdf_integer('BT.Time_Reversal',1) 
+
+ ! ===================================================================
+ ! (2) Find rotation matrices
+ ! ===================================================================
+
+ nk = product(mesh)
+
  call cart2frac(na, xa(1,:), xa(2,:), xa(3,:), cell, fxa)
 
- ! TODO: symmetrize structure
- ! spg_find_primitive(cell, fxa, isa, na, symprec) => ?
-
- allocate(fxa4(3,na*4), isa4(na*4), grid_address(3,nk), map(nk))
-
- fxa4 = 0.0
- isa4 = 0
- fxa4(:,1:na) = fxa
- isa4(1:na) = isa
-
- is_time_reversal = 0
-
- ! TODO: calculate rotation matrices, translation vectors
- ! and lattice type.
  ! ds usage:
  ! https://atztogo.github.io/spglib/api.html?highlight=kpoint#spg-get-dataset-and-spg-get-dataset-with-hall-number
  ds = spg_get_dataset(tcell, fxa, isa, na, symprec)
@@ -164,53 +148,62 @@ subroutine siesta2bt(cell, xa, na)
  print*, 'siesta2bt:  Space Group:', ds%spacegroup_number
 
  print*, 'siesta2bt:  Number of symops:', ds%n_operations
- ! get irreducible k-points (ik-points)
- ! What do in the case of non-cartesian basis?
 
+ ! ===================================================================
+ ! (3) Find irreducible k-points
+ ! ===================================================================
+
+ allocate(grid_address(3,nk), map(nk))
+
+ ! get irreducible k-points (ik-points)
  ink = spg_get_ir_reciprocal_mesh(grid_address, &
                                   map,          &
                                   mesh,         &
-                                  is_shift,     &
-                                  is_time_reversal,  &
+                                  shift,     &
+                                  time_reversal,  &
                                   tcell,        &
                                   fxa,          &
                                   isa,          &
                                   na,           &
                                   symprec)
 
- allocate(ikp(3,ink),ikp_cart(3,ink))
- ikp=0.d0
-!
-! To account for the difference of indices in C and Fortran, add 1 to values of all
-! elements of map
-!
+ allocate(kpoint_frac(3,ink),kpoint_cart(3,ink))
+ kpoint_frac=0.d0
+
+ ! To account for the difference of indices in C and Fortran, add 1 to values of all
+ ! elements of map
+
  map = map + 1
 
-!
-! Extracts k-points in the ibz. map contains the index of a point in
-! grid_address; if iteration variable i and map(i) are equal, then this is one
-! point in the IBZ.
-!
+ ! Extracts k-points in the ibz. map contains the index of a point in
+ ! grid_address; if iteration variable i and map(i) are equal, then this is one
+ ! point in the IBZ.
+
  counter_kp_ibz = 0
  do i = 1, nk
     if (i == map(i)) then
       counter_kp_ibz = counter_kp_ibz + 1
-      ikp(:,counter_kp_ibz) = dble(is_shift + 2*grid_address(:,map(i)))/dble(2*mesh)
+      kpoint_frac(:,counter_kp_ibz) = dble(shift + 2*grid_address(:,map(i)))/dble(2*mesh)
     end if
  end do
 
- ! calculates eigenenergies
  call reclat( cell, rcell, 1 )
+ kpoint_cart = matmul(rcell,kpoint_frac)
 
- ikp_cart = matmul(rcell,ikp)
+ ! ===================================================================
+ ! (4) Calculate bands
+ ! ===================================================================
 
- call bands( no_s, h_spin_dim, spinor_dim, no_u, no_l, maxnh, ink, &
+ allocate( ebk(last_band, spinor_dim, nk) )
+
+ call bands( no_s, h_spin_dim, spinor_dim, last_band, no_l, maxnh, ink, &
              numh, listhptr, listh, H, S, ef, xijo, indxuo, &
-             .false., ink, ikp_cart, ebk, occtol, .false. )
+             .false., ink, kpoint_cart, ebk, occtol, .false. )
 
- ! Write BoltzTrap input files:
- ! ===============================================
- ! (1) intrans file
+ ! ===================================================================
+ ! (5) Save files in BoltzTrap format:
+ ! ===================================================================
+ ! 1) intrans file
  
  open(101,file=trim(slabel)//'.intrans')
  
@@ -224,40 +217,34 @@ subroutine siesta2bt(cell, xa, na)
  write(101,'(A)') '0.15                      # (efcut) energy range of chemical potential'
  write(101,'(A)') '800. 50.                  # Tmax, temperature grid'
  write(101,'(A)') '-1                        # energyrange of bands given individual DOS output'
- write(101,'(A)') '                          # sig_xxx and dos_xxx (xxx is band number)'
- write(101,'(A)') 'TETRA'
+ write(101,'(A)') 'TETRA                     # sig_xxx and dos_xxx (xxx is band number)'
 
  close(101) 
 
- ! ===============================================
- ! (2) struct file
+ ! ===================================================================
+ ! 2) struct file
  open(102,file=trim(slabel)//'.struct')
 
  ! title 
  write(102,'(A)') trim(slabel)
  
  ! lattice vectors (Bohr)
- write(102,'(3F16.9)') cell(1,:)
- write(102,'(3F16.9)') cell(2,:)
- write(102,'(3F16.9)') cell(3,:)
+ write(102,'(3F16.9)') cell(:,1)
+ write(102,'(3F16.9)') cell(:,2)
+ write(102,'(3F16.9)') cell(:,3)
 
  ! number of operations
- write(102,'(I2)') ds%n_operations
+ write(102,'(I3)') ds%n_operations
 
- ! rotation matrices are transposed because C ordering and Fortran ordering are
- ! different
+ ! rotation matrices
  do i=1, ds%n_operations
-   ds%rotations(:,:,i) = transpose(ds%rotations(:,:,i))
-   write(102,'(3I4)') ds%rotations(1,:,i)
-   write(102,'(3I4)') ds%rotations(2,:,i)
-   write(102,'(3I4)') ds%rotations(3,:,i)
-   write(102,'(I4)') i
+   write(102,'(9I3)') ds%rotations(:,:,i)
  enddo
 
  close(102)
 
- ! ===============================================
- ! (3) energy file. k-points are written **in fracional coordinates**
+ ! ===================================================================
+ ! 3) energy file
 
  open(103,file=trim(slabel)//'.energy')
  
@@ -267,44 +254,19 @@ subroutine siesta2bt(cell, xa, na)
  ! number of irreducible kpoints
  write(103,'(I8)') ink
  
- nb2write = 20  ! Trocar por NumberOfEigenstates para economizar poder computacional
- ! write k-points
+ ! write ik-points
  do i = 1, ink
-   write(103,'(3F14.9,I5)') ikp(:,i), nb2write
+   write(103,'(3F14.9,I5)') kpoint_frac(:,i), spinor_dim*(first_band - last_band)
+
    ! write energies
-   do ii = 1,spinor_dim
-     do iii = 1, nb2write
-       write(103,'(F14.10)') ebk(iii,ii,i)*13.605698066
+   do ii = 1, spinor_dim
+     do iii = first_band, last_band
+       write(103,'(F14.10)') ebk(iii,ii,i)
      enddo
    enddo
  enddo
 
  close(103)
 
- ! ===============================================
- ! (4) debug file
-
- open(104,file=trim(slabel)//'.debug')
- write(104,*) 'cell:'
- write(104,*) cell(:,1)*0.529177
- write(104,*) cell(:,2)*0.529177
- write(104,*) cell(:,3)*0.529177
- write(104,*) 'tcell:'
- write(104,*) tcell(:,1)*0.529177
- write(104,*) tcell(:,2)*0.529177
- write(104,*) tcell(:,3)*0.529177
- write(104,*) na
- do i=1, na
-   write(104,*) fxa(:,i)
- enddo
- write(104,*) 'space group num:',ds%spacegroup_number
- write(104,*) ''
- write(104,*) 'nkpoints', ink 
- write(104,*) ''
- write(104,*) 'kpoints:'
- write(104,'(4F14.9)') (ikp(:,i), i=1,ink)
- close(104)
-
- 
 end subroutine siesta2bt
 
