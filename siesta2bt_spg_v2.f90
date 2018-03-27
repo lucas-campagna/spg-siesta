@@ -51,7 +51,7 @@ subroutine siesta2bt(cell, xa, na)
 ! through subroutine reclat.
 ! *******************************************************************
 
- integer                    :: na
+ integer                    :: na, nb
  real(dp)                   :: cell(3,3)
  real(dp)                   :: xa(3,na)
  real(dp)                   :: tcell(3,3)
@@ -69,7 +69,10 @@ subroutine siesta2bt(cell, xa, na)
  
  integer                   :: time_reversal
  real(dp)                  :: symprec
- type(SpglibDataset)       :: ds
+ integer                   :: n_operations
+ integer                   :: max_size
+ integer,      allocatable :: rotation(:,:,:)
+ integer,      allocatable :: translation(:,:)
  integer,      allocatable :: grid_address(:,:)
  integer,      allocatable :: map(:)
 
@@ -141,13 +144,17 @@ subroutine siesta2bt(cell, xa, na)
 
  call cart2frac(na, xa(1,:), xa(2,:), xa(3,:), cell, fxa)
 
- ! ds usage:
- ! https://atztogo.github.io/spglib/api.html?highlight=kpoint#spg-get-dataset-and-spg-get-dataset-with-hall-number
- ds = spg_get_dataset(tcell, fxa, isa, na, symprec)
+ nb = spg_find_primitive(tcell, fxa, isa, na, symprec)
 
- print*, 'siesta2bt:  Space Group:', ds%spacegroup_number
+ allocate(rotation(3,3,48), translation(3,48))
 
- print*, 'siesta2bt:  Number of symops:', ds%n_operations
+ n_operations = spg_get_symmetry(rotation, translation, 48, tcell, fxa, isa, nb, symprec)
+ 
+!ds = spg_get_dataset(tcell, fxa, isa, na, symprec)
+
+!print*, 'siesta2bt:  Space Group:', ds%spacegroup_number
+
+ print*, 'siesta2bt:  Number of symops:', n_operations
 
  ! ===================================================================
  ! (3) Find irreducible k-points
@@ -164,7 +171,7 @@ subroutine siesta2bt(cell, xa, na)
                                   tcell,        &
                                   fxa,          &
                                   isa,          &
-                                  na,           &
+                                  nb,           &
                                   symprec)
 
  allocate(kpoint_frac(3,ink),kpoint_cart(3,ink))
@@ -234,11 +241,11 @@ subroutine siesta2bt(cell, xa, na)
  write(102,'(3F16.9)') cell(:,3)
 
  ! number of operations
- write(102,'(I3)') ds%n_operations
+ write(102,'(I3)') n_operations
 
  ! rotation matrices
- do i=1, ds%n_operations
-   write(102,'(9I3)') ds%rotations(:,:,i)
+ do i=1, n_operations
+   write(102,'(9I3)') rotations(:,:,i)
  enddo
 
  close(102)

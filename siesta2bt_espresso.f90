@@ -125,7 +125,7 @@ subroutine siesta2bt(cell, xa, na)
  symprec = fdf_single('BT.Symprec',1.e-2)
 
  first_band = fdf_integer('BT.First_Band',1)
- last_band  = fdf_integer('BT.Last_Band',first_band+15)
+ last_band  = fdf_integer('BT.Last_Band',no_u)
 
  if (first_band > last_band) call die('BT.Last_Band argument must be bigger than BT.First_Band')
  if (last_band > no_u) last_band = no_u
@@ -153,7 +153,7 @@ subroutine siesta2bt(cell, xa, na)
  allocate(kpoint_frac(3,nk), kweight(nk))
 
  call find_irreducible_kpoints(mesh,             &
-                               dble(shift)/2.d0, &
+                               shift,            &
                                time_reversal,    &
                                ds%rotations,     &
                                ds%n_operations,  &
@@ -180,7 +180,7 @@ subroutine siesta2bt(cell, xa, na)
  allocate( ebk(last_band, spinor_dim, nk) )
 
  ! calculate eigenenergies
- call bands( no_s, h_spin_dim, spinor_dim, last_band, no_l, maxnh, nk, &
+ call bands( no_s, h_spin_dim, spinor_dim, no_u, no_l, maxnh, nk, &
              numh, listhptr, listh, H, S, ef, xijo, indxuo, &
              .false., ink, kpoint_cart, ebk, occtol, .false. )
 
@@ -196,12 +196,12 @@ subroutine siesta2bt(cell, xa, na)
  write(101,'(F7.5,A,F6.0,A)') Ef, ' 0.0005, 0.4 ',qtot,&
             ' # Fermilevel (Ry), energygrid, energy span around Fermilevel, number of electrons'
  write(101,'(A)') 'CALC                      # CALC (calculate expansion coeff), NOCALC read from file'
- write(101,'(A)') '3                         # lpfac, number of latt-points per k-point'
+ write(101,'(A)') '5                         # lpfac, number of latt-points per k-point'
  write(101,'(A)') 'BOLTZ                     # run mode (only BOLTZ is supported)'
  write(101,'(A)') '0.15                      # (efcut) energy range of chemical potential'
  write(101,'(A)') '800. 50.                  # Tmax, temperature grid'
  write(101,'(A)') '-1                        # energyrange of bands given individual DOS output'
- write(101,'(A)') 'TETRA                     # sig_xxx and dos_xxx (xxx is band number)'
+ write(101,'(A)') 'HISTO                     # sig_xxx and dos_xxx (xxx is band number)'
 
  close(101) 
 
@@ -240,7 +240,7 @@ subroutine siesta2bt(cell, xa, na)
  
  ! write ik-points
  do i = 1, ink
-   write(103,'(3F14.9,I5)') kpoint_frac(:,i), spinor_dim*(first_band - last_band)
+   write(103,'(3F14.9,I5)') kpoint_frac(:,i), spinor_dim*(last_band - first_band) + 1
    
    ! write energies
    do ii = 1, spinor_dim
@@ -259,7 +259,7 @@ subroutine find_irreducible_kpoints(mesh, shift, is_time_reversal,rot, nrot, kpo
  implicit none
  ! ***************** INPUT **********************************************
  ! integer  mesh(3)    : Division of reciprocal space
- ! real(dp) shift(3)   : Supercell reciprocal of k-grid unit cell
+ ! integer  shift(3)   : Supercell reciprocal of k-grid unit cell
  ! integer  nrot       : Numer of rotation matrixes
  ! integer  rot        : Rotations matrixes
  ! ***************** IN/OUTPUT *********************************************
@@ -269,12 +269,9 @@ subroutine find_irreducible_kpoints(mesh, shift, is_time_reversal,rot, nrot, kpo
  ! real(dp) kpoints(3,ink) : K-points in terms of reciprocal vectors
  ! real(dp) kweight(ink)   : weights
  !
- ! (1) calculos como no quantum espresso
- ! (2) nossos calculos
- !
  ! Input
  integer,   intent(in) :: mesh(3)
- real(dp),  intent(in) :: shift(3)
+ integer,   intent(in) :: shift(3)
  integer,   intent(in) :: nrot      
  integer,   intent(in) :: rot(3,3,nrot) 
  integer,   intent(in) :: is_time_reversal
@@ -304,7 +301,7 @@ subroutine find_irreducible_kpoints(mesh, shift, is_time_reversal,rot, nrot, kpo
    do j=1, mesh(2)
      do k=1, mesh(3)
        n = (k-1) + (j-1)*mesh(3) + (i-1)*mesh(2)*mesh(3) + 1
-       kpoint(:,n) = ( dble((/i,j,k/)-1)/mesh + dble(shift) )/mesh
+       kpoint(:,n) = ( 2*dble((/i,j,k/)-1) + dble(shift) )/(2*mesh)
      enddo 
    enddo 
  enddo 
@@ -317,10 +314,10 @@ subroutine find_irreducible_kpoints(mesh, shift, is_time_reversal,rot, nrot, kpo
      do m = 1, nrot
        kpoint_rot = matmul(rot(:,:,m),kpoint(:,l))
        kpoint_rot = kpoint_rot - nint(kpoint_rot)
-       rr = kpoint_rot*mesh - shift
+       rr = kpoint_rot*mesh - 0.5d0*shift
        in_the_list = maxval(dabs(rr - nint(rr))/2.d0) <= ds2
        if (in_the_list) then
-         kindex_rot = mod ( nint ( kpoint_rot*mesh - shift + 2*mesh ) , mesh ) + 1
+         kindex_rot = mod ( nint ( kpoint_rot*mesh - 0.5d0*shift + 2*mesh ) , mesh ) + 1
          n = (kindex_rot(3)-1) + (kindex_rot(2)-1)*mesh(3) + (kindex_rot(1)-1)*mesh(2)*mesh(3) + 1
          if (n > l .and. equiv(n) == n) then
            equiv(n) = l
@@ -329,10 +326,10 @@ subroutine find_irreducible_kpoints(mesh, shift, is_time_reversal,rot, nrot, kpo
            IF (equiv(n)/=l .or. n<l ) write(*,*) 'siesta2bt: Erro kpoint_grid!'
          endif
          if (is_time_reversal == 1) then
-           rr = -kpoint_rot*mesh - shift
+           rr = -kpoint_rot*mesh - 0.5d0*shift
            in_the_list = maxval(dabs(rr - nint(rr))/2.d0) <= ds2
            if (in_the_list) then
-             kindex_rot = mod ( nint ( - kpoint_rot*mesh - shift + 2*mesh ) , mesh ) + 1
+             kindex_rot = mod ( nint ( - kpoint_rot*mesh - 0.5d0*shift + 2*mesh ) , mesh ) + 1
              n = (kindex_rot(3)-1) + (kindex_rot(2)-1)*mesh(3) + (kindex_rot(1)-1)*mesh(2)*mesh(3) + 1
              if (n > l .and. equiv(n) == n) then
                equiv(n) = l
