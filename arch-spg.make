@@ -34,8 +34,6 @@ $(SPGPATH)/siesta2bt.f90: $(SPGPATH)/siesta2bt_spg_findsym.f90
 download-spg: 
 	@ echo Target: $@
 	@ ( cd $(SPGPATH) ; test -d spglib || git clone https://github.com/atztogo/spglib.git )
-	mv spg-siesta/* .
-	rm -d spg-siesta
 
 $(SPGPATH)/spglib: download-spg 
 	@ echo Target: $@
@@ -46,6 +44,8 @@ $(SPGPATH)/spglib/_build/libsymspg.a $(SPGPATH)/spglib/example/spglib_f08.f90: i
 $(SPGPATH)/siesta2bt_*.f90 $(SPGPATH)/siesta_analysis_spg.F:
 	@ echo Target: $@
 	@ ( cd $(SPGPATH) ; git clone git@github.com:lucas-campagna/spg-siesta.git )
+	mv spg-siesta/* .
+	rm -d spg-siesta
 
 
 clean-spg: clean-install-spg
