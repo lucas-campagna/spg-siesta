@@ -8,7 +8,8 @@ Os arquivos siesta2bt_espresso.f90, siesta2bt_spg_dataset.f90 e siesta2bt_spg_fi
 pelo método utilizado pelo quantum espresso e os dois últimos por metodos diferentes da biblioteca spglib, sendo que o primeiro faz uso da estrutra
 spgdataset e segunda nao.
 
-- Instalação
+- Instalação:
+
 Inclua o arch-spg.make no seu arquivo arch.make ou no seu arquivo Makefile, preste atenção para incluir após a primeira receita. Para não correr este risco nós recomendamos que a inclusão seja feita no arquivo arch.make. Em seguida, inclua libsymspg.a em COMP_LIBS e execute make.
 
 #========================================================================================
@@ -19,5 +20,15 @@ The files siesta2bt_espresso.f90, siesta2bt_spg_dataset.f90 and siesta2bt_spg_fi
 
 
 - Install:
+
 Include the arch-spg.make file into your arch.make or into the Makefile, but pay attention to include this after the first recipe. To miss this error we highly recommend you to put this in arch.make. Last step include libsymspg.a to COMP_LIBS, then type make.
 
+#========================================================================================
+
+[Es]
+
+Los archivos siesta2bt_espresso.f90, siesta2bt_spg_dataset.f90 y siesta2bt_spg_findsym.f90 poseen la rutina siesta2bt que busca los puntos k por el método utilizado por el quantum espresso y los dos últimos por métodos diferentes de la biblioteca spglib, siendo que el primero hace uso de la estructura spgdataset y segunda no.
+
+- Instalación:
+
+Incluya el arch-spg.make en su archivo arch.make o en su archivo de Makefile, preste atención a incluir después de la primera receta. Para no correr este riesgo recomendamos que la inclusión se haga en el archivo arch.make. A continuación, incluya libsymspg.a en COMP_LIBS y ejecute make.
