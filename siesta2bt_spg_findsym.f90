@@ -72,7 +72,7 @@ subroutine siesta2bt(cell, xa, na)
  integer                   :: n_operations
  integer                   :: max_size
  integer,      allocatable :: rotation(:,:,:)
- integer,      allocatable :: translation(:,:)
+ real(dp),     allocatable :: translation(:,:)
  integer,      allocatable :: grid_address(:,:)
  integer,      allocatable :: map(:)
 
@@ -145,10 +145,11 @@ subroutine siesta2bt(cell, xa, na)
  call cart2frac(na, xa(1,:), xa(2,:), xa(3,:), cell, fxa)
 
  nb = spg_find_primitive(tcell, fxa, isa, na, symprec)
+ max_size = 48
 
- allocate(rotation(3,3,48), translation(3,48))
+ allocate(rotation(3,3,max_size), translation(3,max_size))
 
- n_operations = spg_get_symmetry(rotation, translation, 48, tcell, fxa, isa, nb, symprec)
+ n_operations = spg_get_symmetry(rotation, translation, max_size, tcell, fxa, isa, nb, symprec)
  
 !ds = spg_get_dataset(tcell, fxa, isa, na, symprec)
 
@@ -245,7 +246,7 @@ subroutine siesta2bt(cell, xa, na)
 
  ! rotation matrices
  do i=1, n_operations
-   write(102,'(9I3)') rotations(:,:,i)
+   write(102,'(9I3)') rotation(:,:,i)
  enddo
 
  close(102)
