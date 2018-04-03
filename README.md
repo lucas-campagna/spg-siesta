@@ -9,25 +9,30 @@ spgdataset e segunda nao.
 
 - Instalação:
 
-Inclua o arch-spg.make no arquivo Makefile do siesta, preste atenção para incluir após a primeira receita, para não correr este risco nós recomendamos que a inclusão seja feita junta ou após a inclusao do arquivo arch.make. Em seguida, inclua libsymspg.a em COMP_LIBS e execute make.
+i) Crie uma pasta no diretório path/to/siesta/Src/ e copie os arquivos que estão contidos neste repositório, ou, no diretório Src/, digite:
+
+git clone https://github.com/lucas-campagna/spg-siesta.git
+
+ii) Copie o arquivo arch-spg.make para o diretorio Obj/ (ou o que está sendo usado para compilar o siesta).
+
+iii) Inclua o arch-spg.make no arquivo Makefile do siesta, preste atenção para incluir após a primeira receita, para não correr este risco nós recomendamos que a inclusão seja feita junta ou após a inclusao do arquivo arch.make.
+
+Obs: existem três métodos que podem ser escolhidos como dito anteriormente, para escolher algum copier seu respectivo arquivo para o novo diretório criado no passo i) com nome siesta2bt.f90. O método padrão utilizado  aquele que faz o uso das subrotinas spg_find_primitive e spg_get_symmetry (contido no arquivo siesta2bt_spg_findsym.f90).
 
 #========================================================================================
 
 [En]
 
-The files siesta2bt_espresso.f90, siesta2bt_spg_dataset.f90 and siesta2bt_spg_findsym.f90 use the subroutine siesta2bt to search irreducible k-points, each by a method. The first uses the same kind of method used by quantum espresso, the others two use methods provided by spglib, the first one makes use spgdataset structure unlinke the second one that makes use of find_primitive and get_symmetry subroutines.
-
+The files siesta2bt_espresso.f90, siesta2bt_spg_dataset.f90 and siesta2bt_spg_findsym.f90 use the subroutine siesta2bt to search irreducible k-points, each by a method. The first uses the same kind of method used by quantum espresso, the others two use methods provided by spglib, the first one makes use spgdataset structure unlinke the second one that makes use of spg_find_primitive and spg_get_symmetry subroutines.
 
 - Install:
 
-Include the arch-spg.make file into Makefile of siesta, but pay attention to include this after the first recipe, to miss this error we highly recommend you to include this together or after the arch.make inclusion. Last step include libsymspg.a to COMP_LIBS, then type make.
+i) Create a folder in the directry path/to/siesta/Src/ and copie the files that are in this repository, or just enter into your Src/ directory ant type:
 
-#========================================================================================
+git clone https://github.com/lucas-campagna/spg-siesta.git
 
-[Es]
+ii) Copie the arch-spg.make to your Obj/ directory (or the used to compile siesta).
 
-Los archivos siesta2bt_espresso.f90, siesta2bt_spg_dataset.f90 y siesta2bt_spg_findsym.f90 poseen la rutina siesta2bt que busca los puntos k por el método utilizado por el quantum espresso y los dos últimos por métodos diferentes de la biblioteca spglib, siendo que el primero hace uso de la estructura spgdataset y segunda no.
+iii) Include the arch-spg.make file into Makefile of siesta, but pay attention to include this after the first recipe, to miss this error we highly recommend you to include this together or after the arch.make inclusion.
 
-- Instalación:
-
-Incluya el arch-spg.make en su archivo arch.make o en su archivo de Makefile, preste atención a incluir después de la primera receta, para no correr este riesgo nosotros recomendamos que la inclusión sea hecha junta o después de la inclusión del archivo arch.make. A continuación, incluya libsymspg.a en COMP_LIBS y ejecute make.
+Obs: there are three methods used here as said before, to choose one copie its respective file to your new directory created in step i) with the name siesta2bt.f90. The default method is the one that does use of spg_find_primitive and spg_get_symmetry subroutines (in siesta2bt_spg_findsym.f90 file).
