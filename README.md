@@ -9,7 +9,7 @@ spgdataset e segunda nao.
 
 - Instalação:
 
-Inclua o arch-spg.make no arquivo Makefile do siesta, preste atenção para incluir após a primeira receita. Para não correr este risco nós recomendamos que a inclusão seja feita junta ou após a inclusao do arquivo arch.make. Em seguida, inclua libsymspg.a em COMP_LIBS e execute make.
+Inclua o arch-spg.make no arquivo Makefile do siesta, preste atenção para incluir após a primeira receita, para não correr este risco nós recomendamos que a inclusão seja feita junta ou após a inclusao do arquivo arch.make. Em seguida, inclua libsymspg.a em COMP_LIBS e execute make.
 
 #========================================================================================
 
@@ -20,7 +20,7 @@ The files siesta2bt_espresso.f90, siesta2bt_spg_dataset.f90 and siesta2bt_spg_fi
 
 - Install:
 
-Include the arch-spg.make file into Makefile of siesta, but pay attention to include this after the first recipe. To miss this error we highly recommend you to include this together or after the arch.make inclusion. Last step include libsymspg.a to COMP_LIBS, then type make.
+Include the arch-spg.make file into Makefile of siesta, but pay attention to include this after the first recipe, to miss this error we highly recommend you to include this together or after the arch.make inclusion. Last step include libsymspg.a to COMP_LIBS, then type make.
 
 #========================================================================================
 
@@ -30,4 +30,4 @@ Los archivos siesta2bt_espresso.f90, siesta2bt_spg_dataset.f90 y siesta2bt_spg_f
 
 - Instalación:
 
-Incluya el arch-spg.make en su archivo arch.make o en su archivo de Makefile, preste atención a incluir después de la primera receta. Para no correr este riesgo nosotros recomendamos que la inclusión sea hecha junta o después de la inclusión del archivo arch.make. A continuación, incluya libsymspg.a en COMP_LIBS y ejecute make.
+Incluya el arch-spg.make en su archivo arch.make o en su archivo de Makefile, preste atención a incluir después de la primera receta, para no correr este riesgo nosotros recomendamos que la inclusión sea hecha junta o después de la inclusión del archivo arch.make. A continuación, incluya libsymspg.a en COMP_LIBS y ejecute make.
