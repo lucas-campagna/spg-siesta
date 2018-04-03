@@ -3,6 +3,8 @@
 OBJS += spglib_f08.o\
         siesta2bt.o
 
+COMP_LIBS+= libsymspg.a
+
 LIBS += -fopenmp -lm
 
 #VPATH ?= $(shell pwd)
