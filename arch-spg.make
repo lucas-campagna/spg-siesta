@@ -5,8 +5,8 @@ OBJS += spglib_f08.o\
 
 LIBS += -fopenmp -lm
 
-VPATH ?= $(shell pwd)
-SPGPATH=$(VPATH)/spg
+#VPATH ?= $(shell pwd)
+SPGPATH=$(shell find $(VPATH) -name arch-spg.make -printf "%h\n" | tail -n 1)
 
 
 siesta2bt.o: spglib_f08.o
