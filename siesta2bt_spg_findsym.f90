@@ -167,7 +167,7 @@ subroutine siesta2bt(cell, xa, na)
  ink = spg_get_ir_reciprocal_mesh(grid_address, &
                                   map,          &
                                   mesh,         &
-                                  shift,     &
+                                  shift,        &
                                   time_reversal,  &
                                   tcell,        &
                                   fxa,          &
@@ -223,7 +223,7 @@ subroutine siesta2bt(cell, xa, na)
  write(101,'(A)') '5                         # lpfac, number of latt-points per k-point'
  write(101,'(A)') 'BOLTZ                     # run mode (only BOLTZ is supported)'
  write(101,'(A)') '0.15                      # (efcut) energy range of chemical potential'
- write(101,'(A)') '800. 50.                  # Tmax, temperature grid'
+ write(101,'(A)') '300. 10.                  # Tmax, temperature grid'
  write(101,'(A)') '-1                        # energyrange of bands given individual DOS output'
  write(101,'(A)') 'HISTO                     # sig_xxx and dos_xxx (xxx is band number)'
 
