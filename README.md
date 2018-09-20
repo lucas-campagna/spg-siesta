@@ -24,6 +24,10 @@ After this, run `./configure` script. It'll modify:
 
 This script will try to compile `spglib` using cmake acording to https://atztogo.github.io/spglib/install.html (accessed 20/09/2018). If it does'nt work for you, we are not responsible, consider the previous link.
 
+This script will automatically backing up the `Makefile` and `siesta_analysis.F`. To return to the original state of your siesta run `backup` script.
+
+We encorage you to read the scripts and subroutines and sugests betters ways to do his jobs.
+
 ## How to use
 
 This extention add up the following pamarmeters to FDF file.
