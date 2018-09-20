@@ -15,7 +15,7 @@ On `path/to/siesta/Obj` folder type:
 git clone https://github.com/lucas-campagna/spg-siesta.git
 ```
 
-Or Download it directly from https://github.com/lucas-campagna/spg-siesta clicking in button `Clone or download > Download ZIP`. Save it in `path/to/siesta/Obj` folder as before.
+Or download it directly from https://github.com/lucas-campagna/spg-siesta clicking in button `Clone or download > Download ZIP`. Save it in `path/to/siesta/Obj` folder as before.
 
 After this, run `./configure` script. It'll modify:
 
