@@ -1,0 +1,14 @@
+Src=$(pwd)/../../Src
+
+echo cp Makefile_backup ../Makefile
+cp Makefile_backup ../Makefile
+
+echo cp siesta_analysis_backup.F $Src/siesta_analysis.F 
+cp siesta_analysis_backup.F $Src/siesta_analysis.F 
+
+echo rm $Src/siesta2bt.f90
+rm $Src/siesta2bt.f90
+
+echo rm $Src/spglib_f08.f90
+rm $Src/spglib_f08.f90
+

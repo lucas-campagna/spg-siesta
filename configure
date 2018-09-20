@@ -1,0 +1,91 @@
+#!/bin/bash
+#
+# Script to compile Spglib, and replace siesta_analysis.F with
+# siesta_analysis_spg.F (this call the new subroutine) with a backup.
+#
+# It must be run in a path/to/siesta/Obj/spg-siesta like folder.
+# 
+
+Src=$(pwd)/../../Src
+echo 1\) path to Src:  $Src
+
+# ===================================================================
+# Downloading Spglib
+# ===================================================================
+
+if ! [ -d spglib ]
+then
+  echo 2\) Downloading spglib
+  git clone https://github.com/atztogo/spglib.git
+fi
+
+# ===================================================================
+# Installing Spglig
+# ===================================================================
+
+echo 3\) Compiling Spglib
+(
+export LIBS='-lgomp';
+export CFLAGS='-fopenmp'
+cd spglib
+mkdir -p _build
+cd _build
+cmake ..
+make
+)
+
+# ===================================================================
+# Preparing files
+# ===================================================================
+
+echo 4\) Preparing files to compilation
+echo cp spglib/_build/libsymspg.a .
+cp spglib/_build/libsymspg.a .
+
+echo cp siesta2bt.f90 $Src
+cp siesta2bt.f90 $Src
+
+echo cp spglib/example/spglib_f08.f90 $Src
+cp spglib/example/spglib_f08.f90 $Src
+
+# Making backup
+line=$(cat ../Makefile | grep -n 'siesta:' | head -1 | cut -d':' -f 1)
+line=$(echo $line - 1 | bc)
+
+if ! [ -f Makefile_backup ]
+then
+  echo 5\) Backing up Makefile \(it\'ll be included the spg.make\)
+  cp ../Makefile Makefile_backup
+
+  echo Appending \'include spg-siesta/spg.make\' in line: $line in Makefile
+
+  head -n $line ../Makefile > ../Makefile.tmp
+  echo "#Included by spg-siesta/configure " >> ../Makefile.tmp
+  echo "include spg-siesta/spg.make" >> ../Makefile.tmp
+  tail -n '+'$line ../Makefile >> ../Makefile.tmp
+  mv ../Makefile.tmp ../Makefile
+fi
+
+if ! [ -f siesta_analysis_backup.F ]
+then
+  
+  echo 6\) Backing up siesta_analysis.F \(it\'ll be added the call to siesta2bt subroutine\)
+  echo cp $Src/siesta_analysis.F siesta_analysis_backup.F
+  cp $Src/siesta_analysis.F siesta_analysis_backup.F
+  
+  version=$(cat ../../version.info | cut -d '-' -f 2)
+  echo 7\) Version find: $version
+  echo 8\) This script were made for version 4.1-b3
+  
+  case $version in
+  #  TODO
+  #  '3.2')
+  #    echo cp siesta_analysis_v3.2-pl-5.F $Src/siesta_analysis.F
+  #    cp siesta_analysis_v3.2-pl-5.F $Src/siesta_analysis.F
+  #  ;;
+    '4.1')
+      echo cp siesta_analysis_v4.1-b3.F   $Src/siesta_analysis.F
+      cp siesta_analysis_v4.1-b3.F   $Src/siesta_analysis.F
+    ;;
+  esac
+fi
