@@ -22,9 +22,9 @@ After this, run `./configure` script. It'll modify:
  - `Makefile`, to include the new spg.make in the correct position;
  - `siesta_analysis.F`, to include, in the correct position, the call to the subroutine that makes all the work.
 
-This script will try to compile `spglib` using cmake acording to https://atztogo.github.io/spglib/install.html (accessed 20/09/2018). If it does'nt work for you, we are not responsible, consider the previous link.
+This script will try to compile `spglib` using cmake acording to https://atztogo.github.io/spglib/install.html (accessed 20/09/2018). If this does not work for you, we are not responsible, consider the previous link.
 
-This script will automatically backing up the `Makefile` and `siesta_analysis.F`. To return to the original state of your siesta run `backup` script.
+This script will automatically back up the `Makefile` and `siesta_analysis.F`. To return to the original state of your siesta run `backup` script.
 
 We encorage you to read the scripts and subroutines and sugests betters ways to do his jobs.
 
