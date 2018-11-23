@@ -44,9 +44,9 @@ case $version in
   '3.2')
     versio_dir=siesta-v3.2
   ;;
-#  'v4.0.2')                      #  =====>
-#    version_dir=siesta-v4.0.2    #   TODO
-#  ;;                             # <=====
+  'v4.0.2')                      
+    version_dir=siesta-v4.0.2    
+  ;;                             
   '4.1')
     version_dir=siesta-v4.1
   ;;
