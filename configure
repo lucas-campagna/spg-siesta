@@ -6,24 +6,78 @@
 # It must be run in a path/to/siesta/Obj/spg-siesta like folder.
 # 
 
-Src=$(pwd)/../../Src
-echo 1\) path to Src:  $Src
+# ===================================================================
+# Useful function
+# ===================================================================
+
+function version_check {
+  dir=$1
+  if [ $(cat ../../version.info) != $(cat $dir/version.info) ] then
+    echo WARNING: Siesta version little different from this implementation:
+    echo Your version:  $(cat ../../version.info)
+    echo Implementaion: $(cat $dir/version.info)
+    echo You may found erros
+    echo Continue? \(y\/n\)
+    read a
+    test $a != 'y' && exit
+  fi 
+}
 
 # ===================================================================
-# Downloading Spglib
+# Variables
+# ===================================================================
+
+i=1
+function i++ { i=$(echo $i+1 | bc)}
+Src=$(pwd)/../../Src
+backup_dir=./backup
+
+# ===================================================================
+# Check Siesta version
+# ===================================================================
+
+echo 
+echo $i\) Checking Siesta version compatibility...; i++
+version=$(cat ../../version.info | cut -d '-' -f 2)
+
+case $version in
+  '3.2')
+    versio_dir=siesta-v3.2
+  ;;
+#  'v4.0.2')                      #  =====>
+#    version_dir=siesta-v4.0.2    #   TODO
+#  ;;                             # <=====
+  '4.1')
+    version_dir=siesta-v4.1
+  ;;
+  *)
+    echo 'Unable version'
+    exit
+  ;;
+esac
+
+version_check($version_dir)
+version=$(cat $version_dir/version.info)
+echo
+echo $i\) Using version: $version; i++
+
+# ===================================================================
+# Download Spglib
 # ===================================================================
 
 if ! [ -d spglib ]
 then
-  echo 2\) Downloading spglib
+  echo 
+  echo $i\) Downloading spglib; i++
   git clone https://github.com/atztogo/spglib.git
 fi
 
 # ===================================================================
-# Installing Spglig
+# Compile Spglig
 # ===================================================================
 
-echo 3\) Compiling Spglib
+echo 
+echo $i\) Compiling Spglib; i++
 (
 export LIBS='-lgomp';
 export CFLAGS='-fopenmp'
@@ -35,57 +89,51 @@ make
 )
 
 # ===================================================================
-# Preparing files
+# Prepare files
 # ===================================================================
 
-echo 4\) Preparing files to compilation
-echo cp spglib/_build/libsymspg.a .
-cp spglib/_build/libsymspg.a .
-
-echo cp siesta2bt.f90 $Src
-cp siesta2bt.f90 $Src
+echo 
+echo $i\) Preparing files to compilation; i++
 
 echo cp spglib/example/spglib_f08.f90 $Src
 cp spglib/example/spglib_f08.f90 $Src
 
-# Making backup
-line=$(cat ../Makefile | grep -n 'siesta:' | head -1 | cut -d':' -f 1)
-line=$(echo $line - 1 | bc)
+# ===================================================================
+# Back up & copy
+# ===================================================================
 
-if ! [ -f Makefile_backup ]
+if ! [ -f $backup_dir/Makefile ]
 then
-  echo 5\) Backing up Makefile \(it\'ll be included the spg.make\)
-  cp ../Makefile Makefile_backup
+  echo
+  echo $i\) Backing up Makefile \(it\'ll be included the spg.make\); i++
 
-  echo Appending \'include spg-siesta/spg.make\' in line: $line in Makefile
+  line=$(cat ../Makefile | grep -n 'siesta:' | head -1 | cut -d':' -f 1)
+  line=$(echo $line - 1 | bc)
+
+  cp ../Makefile $backup_dir/Makefile
+
+  echo Appending \'include spg-siesta/$version_dir/spg.make\' in line: $line in Makefile
 
   head -n $line ../Makefile > ../Makefile.tmp
   echo "#Included by spg-siesta/configure " >> ../Makefile.tmp
-  echo "include spg-siesta/spg.make" >> ../Makefile.tmp
+  echo "include spg-siesta/$version_dir/spg.make" >> ../Makefile.tmp
   tail -n '+'$line ../Makefile >> ../Makefile.tmp
   mv ../Makefile.tmp ../Makefile
 fi
 
-if ! [ -f siesta_analysis_backup.F ]
+
+if ! [ -f $backup_dir/siesta_analysis.F ]
 then
+  echo
+  echo $i\) Backing up siesta_analysis.F \(it\'ll be added the call to siesta2bt subroutine\); i++
+  echo cp $Src/siesta_analysis.F $backup_dir/siesta_analysis.F
+  cp $Src/siesta_analysis.F $backup_dir/siesta_analysis.F
   
-  echo 6\) Backing up siesta_analysis.F \(it\'ll be added the call to siesta2bt subroutine\)
-  echo cp $Src/siesta_analysis.F siesta_analysis_backup.F
-  cp $Src/siesta_analysis.F siesta_analysis_backup.F
-  
-  version=$(cat ../../version.info | cut -d '-' -f 2)
-  echo 7\) Version find: $version
-  echo 8\) This script were made for version 4.1-b3
-  
-  case $version in
-  #  TODO
-  #  '3.2')
-  #    echo cp siesta_analysis_v3.2-pl-5.F $Src/siesta_analysis.F
-  #    cp siesta_analysis_v3.2-pl-5.F $Src/siesta_analysis.F
-  #  ;;
-    '4.1')
-      echo cp siesta_analysis_v4.1-b3.F   $Src/siesta_analysis.F
-      cp siesta_analysis_v4.1-b3.F   $Src/siesta_analysis.F
-    ;;
-  esac
+  echo
+  echo $i\) Wrinting files:; i++
+  echo cp $version_dir/siesta_analysis.F   $Src/siesta_analysis.F
+  cp $version_dir/siesta_analysis.F $Src/siesta_analysis.F
+ 
+  echo cp $version_dir/siesta2bt.f90 $Src/siesta2bt.f90
+  cp $version_dir/siesta2bt.f90 $Src/siesta2bt.f90
 fi

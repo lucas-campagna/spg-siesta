@@ -449,9 +449,6 @@
        endif
       endif
 
-!     Generating files for BoltzTraP calculations
-      call siesta2bt(ucell,xa,na_u)
-
 !     Calculation of the optical conductivity
       call optical(na_u, na_s, xa_last, scell_last, ucell_last,
      &             no_u, no_l, no_s, nspin, qspin,
@@ -519,6 +516,9 @@ C     Find local density of states
       endif
 #endif
       if (SIESTA_worker) call timer("Analysis",2)
+
+!     Generating files for BoltzTraP calculations
+      call siesta2bt(ucell,xa,na_u)
 
 !------------------------------------------------------------------------- END
       END subroutine siesta_analysis

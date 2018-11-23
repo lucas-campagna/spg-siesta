@@ -12,20 +12,17 @@ subroutine siesta2bt(cell, xa, na)
  use siesta_geom,  only : isa
  use sys,          only : die
 
- use chemical,     only : number_of_species
  use atomlist,     only : qtot
 
  ! Needed for band call
  use atomlist,        only : no_s, no_u ,no_l, indxuo
- use m_spin,          only : h_spin_dim, spinor_dim
- use sparse_matrices, only : maxnh, listh, listhptr, numh
- use sparse_matrices, only : H, S, xijo
+ use m_spin,          only : nspin
+ use sparse_matrices, only : maxnh, listh, listhptr, numh, H, S, xijo
  use siesta_options,  only : occtol
  use m_energies,      only : ef
  use band,            only : bands
 
  use files, only : slabel
- use cellsubs,      only : reclat
 
  implicit none
 
@@ -94,6 +91,8 @@ subroutine siesta2bt(cell, xa, na)
  ! Band energies
  real(dp),    allocatable :: ebk(:,:,:)
 
+ write(6,'(/,a)') 'Begining of SIESTA to BoltzTraP subroutine (siesta2bt)'
+
  ! transposing cell for c-fortran wrapper used in spglib
  tcell = transpose(cell)
 
@@ -142,6 +141,8 @@ subroutine siesta2bt(cell, xa, na)
 
  nk = product(mesh)
 
+ write(6,'(/,a)'), 'siesta2bt: searching for rotation matrices (symmetry operations) via Spglib'
+
  call cart2frac(na, xa(1,:), xa(2,:), xa(3,:), cell, fxa)
 
  nb = spg_find_primitive(tcell, fxa, isa, na, symprec)
@@ -151,17 +152,19 @@ subroutine siesta2bt(cell, xa, na)
 
  n_operations = spg_get_symmetry(rotation, translation, max_size, tcell, fxa, isa, nb, symprec)
  
-!ds = spg_get_dataset(tcell, fxa, isa, na, symprec)
-
-!print*, 'siesta2bt:  Space Group:', ds%spacegroup_number
-
- print*, 'siesta2bt:  Number of symops:', n_operations
+ write(6,'(/,a,i4)') 'siesta2bt:  number of symmetry operations found: ', n_operations
 
  ! ===================================================================
  ! (3) Find irreducible k-points
  ! ===================================================================
 
+ write(6,'(/,a,i5,a3,i5,a3,i5,a3,i11)') 'siesta2bt: allocating grid: ',mesh(1),' x ',mesh(2),' x ',mesh(3),' = ',nk
+
  allocate(grid_address(3,nk), map(nk))
+ 
+ write(6,'(a)') 'Grid successfully allocated!'
+
+ write(6,'(/,a)') 'siesta2bt: finding irreducible k-points (IBZ)'
 
  ! get irreducible k-points (ik-points)
  ink = spg_get_ir_reciprocal_mesh(grid_address, &
@@ -174,6 +177,12 @@ subroutine siesta2bt(cell, xa, na)
                                   isa,          &
                                   nb,           &
                                   symprec)
+ 
+ write(6,'(a)') 'IBZ successfully found!'
+
+ write(6,'(/,a,i4)') 'siesta2bt:  number of irreducible k-points points found: ', ink
+
+ write(6,'(/,a)') 'siesta2bt: allocating IBZ grid...'
 
  allocate(kpoint_frac(3,ink),kpoint_cart(3,ink))
  kpoint_frac=0.d0
@@ -186,6 +195,8 @@ subroutine siesta2bt(cell, xa, na)
  ! Extracts k-points in the ibz. map contains the index of a point in
  ! grid_address; if iteration variable i and map(i) are equal, then this is one
  ! point in the IBZ.
+ 
+ write(6,'(/,a)') 'siesta2bt: extracting IBZ k-points...'
 
  counter_kp_ibz = 0
  do i = 1, nk
@@ -202,9 +213,11 @@ subroutine siesta2bt(cell, xa, na)
  ! (4) Calculate bands
  ! ===================================================================
 
- allocate( ebk(last_band, spinor_dim, nk) )
+ allocate( ebk(last_band, nspin, nk) )
 
- call bands( no_s, h_spin_dim, spinor_dim, no_u, no_l, maxnh, ink, &
+ write(6,'(/,a)') 'siesta2bt: calculating eigenenergies...'
+
+ call bands( no_s, nspin, nspin, no_u, no_l, maxnh, ink, &
              numh, listhptr, listh, H, S, ef, xijo, indxuo, &
              .false., ink, kpoint_cart, ebk, occtol, .false. )
 
@@ -213,6 +226,10 @@ subroutine siesta2bt(cell, xa, na)
  ! ===================================================================
  ! 1) intrans file
  
+ write(6,'(/,a)') 'siesta2bt: writing files:  '
+
+ write(6,'(a)', advance='no') ' '//trim(slabel)//'.intrans '
+
  open(101,file=trim(slabel)//'.intrans')
  
  write(101,'(A)') 'GENE                      # Format of DOS' 
@@ -229,8 +246,13 @@ subroutine siesta2bt(cell, xa, na)
 
  close(101) 
 
+ write(6,'(a)') ' Done!'
+
  ! ===================================================================
  ! 2) struct file
+
+ write(6,'(a)', advance='no') ' '//trim(slabel)//'.struct '
+
  open(102,file=trim(slabel)//'.struct')
 
  ! title 
@@ -251,8 +273,12 @@ subroutine siesta2bt(cell, xa, na)
 
  close(102)
 
+ write(6,'(a)') ' Done!'
+
  ! ===================================================================
  ! 3) energy file
+
+ write(6,'(a)', advance='no') ' '//trim(slabel)//'.energy '
 
  open(103,file=trim(slabel)//'.energy')
  
@@ -264,10 +290,10 @@ subroutine siesta2bt(cell, xa, na)
  
  ! write ik-points
  do i = 1, ink
-   write(103,'(3F14.9,I5)') kpoint_frac(:,i), spinor_dim*(last_band - first_band)+1
+   write(103,'(3F14.9,I5)') kpoint_frac(:,i), nspin*(last_band - first_band)+1
 
    ! write energies
-   do ii = 1, spinor_dim
+   do ii = 1, nspin
      do iii = first_band, last_band
        write(103,'(F14.10)') ebk(iii,ii,i)
      enddo
@@ -275,6 +301,10 @@ subroutine siesta2bt(cell, xa, na)
  enddo
 
  close(103)
+
+ write(6,'(a)') ' Done!'
+ 
+ write(6,'(/,a)') 'End of SIESTA to BoltzTraP subroutine (siesta2bt)'
 
 end subroutine siesta2bt
 

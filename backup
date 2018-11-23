@@ -1,10 +1,11 @@
 Src=$(pwd)/../../Src
+backup_dir=$(grep 'backup_dir=' configure | cut -d '=' -f 2)
 
-echo cp Makefile_backup ../Makefile
-cp Makefile_backup ../Makefile
+echo cp $backup_dir/Makefile ../Makefile
+cp $backup_dir/Makefile ../Makefile
 
-echo cp siesta_analysis_backup.F $Src/siesta_analysis.F 
-cp siesta_analysis_backup.F $Src/siesta_analysis.F 
+echo cp $backup_dir/siesta_analysis.F $Src/siesta_analysis.F 
+cp $backup_dir/siesta_analysis.F $Src/siesta_analysis.F 
 
 echo rm $Src/siesta2bt.f90
 rm $Src/siesta2bt.f90
