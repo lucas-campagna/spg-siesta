@@ -1,5 +1,7 @@
-Src=$(pwd)/../../Src
-backup_dir=$(grep 'backup_dir=' configure | cut -d '=' -f 2)
+#!/bin/bash
+
+Src=../../Src
+backup_dir=$(grep 'backup_dir=' configure.sh | cut -d '=' -f 2)
 
 echo cp $backup_dir/Makefile ../Makefile
 cp $backup_dir/Makefile ../Makefile

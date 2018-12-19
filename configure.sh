@@ -41,15 +41,17 @@ echo
 echo $i\) Checking Siesta version compatibility...; i++
 version=$(cat ../../version.info | cut -d '-' -f 2)
 
+version_dir=''
+
 case $version in
   '3.2')
-    versio_dir=siesta-v3.2
+    version_dir='siesta-v3.2'
   ;;
   'v4.0.2')                      
-    version_dir=siesta-v4.0.2    
+    version_dir='siesta-v4.0.2'
   ;;                             
   '4.1')
-    version_dir=siesta-v4.1
+    version_dir='siesta-v4.1'
   ;;
   *)
     echo 'Unable version'
@@ -57,6 +59,8 @@ case $version in
   ;;
 esac
 
+echo $i\) Using version: $version; i++
+echo Directory: $version_dir
 version_check $version_dir
 version=$(cat $version_dir/version.info)
 echo
@@ -102,6 +106,8 @@ cp spglib/example/spglib_f08.f90 $Src
 # ===================================================================
 # Back up & copy
 # ===================================================================
+
+mkdir -p $backup_dir
 
 if ! [ -f $backup_dir/Makefile ]
 then
