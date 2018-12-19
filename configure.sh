@@ -30,7 +30,7 @@ function version_check {
 
 i=1
 function i++ { i=$(echo $i+1 | bc); }
-Src=$(pwd)/../../Src
+Src=../../Src
 backup_dir=./backup
 
 # ===================================================================
@@ -59,8 +59,6 @@ case $version in
   ;;
 esac
 
-echo $i\) Using version: $version; i++
-echo Directory: $version_dir
 version_check $version_dir
 version=$(cat $version_dir/version.info)
 echo

@@ -15,3 +15,5 @@ rm $Src/siesta2bt.f90
 echo rm $Src/spglib_f08.f90
 rm $Src/spglib_f08.f90
 
+echo rm -rf $backup_dir
+rm -rf $backup_dir
