@@ -12,7 +12,8 @@
 
 function version_check {
   dir=$1
-  if [ $(cat ../../version.info) != $(cat $dir/version.info) ] then
+  if [ $(cat ../../version.info) != $(cat $dir/version.info) ]
+  then
     echo WARNING: Siesta version little different from this implementation:
     echo Your version:  $(cat ../../version.info)
     echo Implementaion: $(cat $dir/version.info)
@@ -28,7 +29,7 @@ function version_check {
 # ===================================================================
 
 i=1
-function i++ { i=$(echo $i+1 | bc)}
+function i++ { i=$(echo $i+1 | bc); }
 Src=$(pwd)/../../Src
 backup_dir=./backup
 
@@ -56,7 +57,7 @@ case $version in
   ;;
 esac
 
-version_check($version_dir)
+version_check $version_dir
 version=$(cat $version_dir/version.info)
 echo
 echo $i\) Using version: $version; i++
@@ -137,3 +138,4 @@ then
   echo cp $version_dir/siesta2bt.f90 $Src/siesta2bt.f90
   cp $version_dir/siesta2bt.f90 $Src/siesta2bt.f90
 fi
+
