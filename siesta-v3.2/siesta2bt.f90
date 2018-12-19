@@ -74,9 +74,10 @@ subroutine siesta2bt(cell, xa, na)
  integer,      allocatable :: map(:)
 
  ! fdf variables
-
- type(block_fdf)            :: bfdf
- type(parsed_line), pointer :: pline
+ 
+ type(block), pointer        :: bfdf
+ character(len=132)          :: pline
+ integer                     :: iu
 
  ! internal variables
 
@@ -85,7 +86,7 @@ subroutine siesta2bt(cell, xa, na)
 
  !mesh and shift of reciprocal space
 
- integer                    :: mesh(3)
+ integer                    :: mesh(3), aux_mesh(3,3)
  integer                    :: shift(3)
 
  ! Band energies
@@ -97,7 +98,7 @@ subroutine siesta2bt(cell, xa, na)
  tcell = transpose(cell)
 
  ! check if block BT.kgrid_Monkhorst_Pack
- bt_calc = fdf_block('BT.kgrid_Monkhorst_Pack',bfdf)
+ bt_calc = fdf_block('BT.kgrid_Monkhorst_Pack',iu)
 
  if ( .not. bt_calc ) then
   return
@@ -117,12 +118,8 @@ subroutine siesta2bt(cell, xa, na)
    if (.not. fdf_bline(bfdf,pline)) then
      call die('siesta2bt: ERROR in BT.kgrid_Monkhorst_Pack block')
    end if
-     mesh(i) = fdf_bintegers(pline,i) 
-   if ( fdf_bnvalues(pline) > 3 ) then
-     shift(i) = nint(fdf_bvalues(pline,4))
-   else
-     shift(i) = 0
-   end if
+   read(iu,*) aux_mesh(i,1),aux_mesh(i,2),aux_mesh(i,3), shift(i)
+   mesh(i) = aux_mesh(i,i)
  enddo
 
  symprec = fdf_single('BT.Symprec',1.e-2)
