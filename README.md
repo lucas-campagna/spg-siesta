@@ -28,6 +28,10 @@ This script will automatically back up the `Makefile` and `siesta_analysis.F`. T
 
 We encorage you to read the scripts and subroutines and sugests betters ways to do his jobs.
 
+Compile Siesta normaly.
+
+Possibly, it's necessary to do `source /opt/intel/bin/compilervars.sh intel64` to run your simulations.
+
 ## How to use
 
 This extention add up the following pamarmeters to FDF file.
