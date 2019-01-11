@@ -177,7 +177,7 @@ subroutine siesta2bt(cell, xa, na)
  
  write(6,'(a)') 'IBZ successfully found!'
 
- write(6,'(/,a,i4)') 'siesta2bt:  number of irreducible k-points points found: ', ink
+ write(6,'(/,a,i10)') 'siesta2bt:  number of irreducible k-points points found: ', ink
 
  write(6,'(/,a)') 'siesta2bt: allocating IBZ grid...'
 
