@@ -1,7 +1,5 @@
 # spg-siesta
 
-#========================================================================================
-
 ## [En]
 
 This implementation makes siesta able to generate input files for BoltzTraP, and study thermoelectricity proprietes.
